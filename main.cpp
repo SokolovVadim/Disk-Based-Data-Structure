@@ -10,9 +10,12 @@ int main()
     return 0;
 }
 
-
 void test_container()
 {
-    auto cont = new Container[1024];
-    Container container(256);
+    auto cont = new cnt::Container(128);
+    cnt::Container container(256);
+    for(int i = 0; i < 10; ++i)
+    {
+        cnt::Container c(256);
+    }
 }
