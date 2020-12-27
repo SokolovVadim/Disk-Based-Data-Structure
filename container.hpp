@@ -5,7 +5,11 @@ namespace cnt {
 
     typedef int8_t data_t;
     static const char* filename = "buffer.txt";
-    enum { SIZE = 1 << 12};
+    enum OFFSETS
+    {
+        SIZE = 1 << 12,
+        TOKEN_SIZE = 10
+    };
 
     template <class T>
     class Counter
@@ -32,7 +36,7 @@ namespace cnt {
     };
 
     template<class T>
-    int Counter<T>::count = 0;
+    int Counter<T>::count = -1;
 
     template<typename T>
     class Container : private Counter<Container<T>>{
@@ -50,13 +54,13 @@ namespace cnt {
         void load_from_file(uint32_t idx);
         void print_data();
         void print_file();
-        void write_to_file(uint32_t pos);
+
         // uint32_t calculate_position(uint32_t pos);
 
     private:
         uint32_t size_; // limit of RAM used
-        uint32_t pos_;  // disk block
-        int32_t offset_; // RAM position
+        uint32_t pos_;  // disk block position
+        int32_t num_; // number of object
         T *data_;
         FILE* fout_;
     };
@@ -73,11 +77,12 @@ namespace cnt {
     Container<T>::Container(uint32_t size) :
             size_(size),
             pos_(0),
-            offset_(-1),
+            num_(0),
             data_(nullptr),
             fout_(nullptr)
     {
         std::cout << "Container constructed with size: " << size_ << ", container num: " << this->GetCount() << std::endl;
+        num_ = this->GetCount();
         fout_ = fopen(filename, "w+r+b");
         if(fout_ == nullptr)
         {
@@ -93,7 +98,7 @@ namespace cnt {
     template<typename T>
     void Container<T>::save_to_file()
     {
-        uint32_t position = pos_ * sizeof(T);
+        uint32_t position = pos_ * sizeof(T) + num_ * size_ * TOKEN_SIZE * sizeof(T);
         //std::cout << "Save to file pos: " << position << std::endl;
 
         int ret = fseek(fout_, position, SEEK_SET);
@@ -113,7 +118,7 @@ namespace cnt {
     template<typename T>
     void Container<T>::load_from_file(uint32_t idx)
     {
-        uint32_t position = (idx / size_) * size_ * sizeof(T);
+        uint32_t position = (idx / size_) * size_ * sizeof(T) + num_ * size_ * TOKEN_SIZE * sizeof(T);
         // std::cout << "position: " << position << std::endl;
         int ret = fseek(fout_, position, SEEK_SET);
         if(ret != 0)
@@ -138,57 +143,31 @@ namespace cnt {
         std::cout << "\n";*/
     }
 
-
-    template<typename T>
-    void Container<T>::write_to_file(uint32_t pos)
-    {
-        std::size_t written_size = fwrite(data_, sizeof(T), size_, fout_);
-        if(written_size != size_)
-        {
-            std::cerr << "Fwrite failed: " << written_size << std::endl;
-        }
-    }
-
     template<typename T>
     void Container<T>::addElem(uint32_t idx, T elem)
     {
         // std::cout << "adding elem ...\n";
         // std::cout << "idx: " << idx << std::endl;
-        if(idx < size_)
+
+
+        if(pos_ / size_ == idx / size_) // the same block
         {
-            // std::cout << "idx is not out of range\n";
-            if(pos_ == 0) // the same block
-            {
-                data_[idx] = elem;
-            }
-            else
-            {
-                save_to_file();
-                load_from_file(idx);
-                data_[idx] = elem;
-                pos_ = 0;
-            }
-        }
-        else // out of range
-        {
-            if(pos_ / size_ == idx / size_) // the same block
-            {
                 // std::cout << "idx > size, the same block, idx: " << idx << std::endl;
                 data_[idx % size_] = elem;
-            }
-            else
-            {
-                // std::cout << "idx > size, different block, idx: " << idx << std::endl;
-                //print_data();
-                save_to_file();
-                //print_data();
-                load_from_file(idx);
-                //print_data();
-                data_[idx % size_] = elem;
-                pos_ = (idx / size_) * size_;
-                //print_data();
-            }
         }
+        else
+        {
+            // std::cout << "idx > size, different block, idx: " << idx << std::endl;
+            //print_data();
+            save_to_file();
+            //print_data();
+            load_from_file(idx);
+            //print_data();
+            data_[idx % size_] = elem;
+            pos_ = (idx / size_) * size_;
+            //print_data();
+        }
+
         // return data_[idx];
 
     }
@@ -196,22 +175,6 @@ namespace cnt {
     template<typename T>
     const T Container<T>::getElem(uint32_t idx)
     {
-        // std::cout << "getting elem ...\n";
-        if(idx < size_)
-        {
-            if(pos_ / size_ == 0) // the same block
-            {
-                return data_[idx];
-            }
-            else
-            {
-                save_to_file();
-                load_from_file(idx);
-                pos_ = 0;
-                return data_[idx];
-            }
-        }
-        else
         {
             //std::cout << "idx is out of range\n";
             if(pos_ / size_ == idx / size_) // the same block
