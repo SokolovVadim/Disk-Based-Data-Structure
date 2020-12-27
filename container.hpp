@@ -49,7 +49,7 @@ namespace cnt {
             fout_(nullptr)
     {
         std::cout << "Container constructed with size: " << size_ << std::endl;
-        fout_ = fopen(filename, "r+w+b");
+        fout_ = fopen(filename, "w+r+b");
         if(fout_ == nullptr)
         {
             std::cerr << "Open failed!\n";
@@ -64,6 +64,16 @@ namespace cnt {
     template<typename T>
     void Container<T>::save_to_file()
     {
+        uint32_t position = pos_ * sizeof(T);
+        std::cout << "Save to file pos: " << position << std::endl;
+
+        int ret = fseek(fout_, position, SEEK_SET);
+        if(ret != 0)
+        {
+            std::cerr << "Fseek failed!\n";
+            return;
+        }
+
         fwrite(data_, sizeof(T), size_, fout_);
         if(ferror(fout_))
         {
@@ -83,9 +93,9 @@ namespace cnt {
             return;
         }
         size_t read_size = fread(data_, sizeof(T), size_, fout_);
-        if(read_size != size_)
+        if((read_size != size_) && (read_size != 0))
         {
-            std::cerr << "Fread failed: " << read_size << std::endl;
+            std::cerr << "Load from file: Fread failed: " << read_size << std::endl;
         }
         ret = fseek(fout_, 0, SEEK_SET);
         if(ret != 0)
@@ -118,10 +128,9 @@ namespace cnt {
         if(idx < size_)
         {
             std::cout << "idx is not out of range\n";
-            if(pos_ / size_ == 0) // the same block
+            if(pos_ == 0) // the same block
             {
                 data_[idx] = elem;
-                pos_ = 0;
             }
             else
             {
@@ -141,14 +150,14 @@ namespace cnt {
             else
             {
                 std::cout << "idx > size, different block, idx: " << idx << std::endl;
-                print_data();
+                //print_data();
                 save_to_file();
-                print_data();
+                //print_data();
                 load_from_file(idx);
-                print_data();
+                //print_data();
                 data_[idx % size_] = elem;
                 pos_ = (idx / size_) * size_;
-                print_data();
+                //print_data();
             }
         }
         // return data_[idx];
@@ -196,6 +205,7 @@ namespace cnt {
     template<typename T>
     void Container<T>::print_data()
     {
+        std::cout << "printing data ...\n";
         for(int i = 0; i < size_; ++i)
             std::cout << data_[i] << " ";
         std::cout << std::endl;
