@@ -1,30 +1,19 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
 #include "container.hpp"
 
 void test_container();
 void measure_time_addElem(uint32_t data_size, uint32_t max_size);
+void test_array(uint32_t elem_num, uint32_t data_size, uint32_t max_size);
 
 int main()
 {
     test_container();
-    //measure_time_addElem(1024, 10 * 1024);
+    test_array(1, 10, 25);
+    measure_time_addElem(1024, 10 * 1024);
     return 0;
 }
-
-/*
- *  // create objects with max RAM storage
-    Container<int8_t> string(1024);
-    Container<float> array(4096);
-    // fill objects
-    for(int i = 0; i < 10000; ++i)
-    {
-        string[i] = i;
-        array[i]  = i;
-    }
-    // get some data
-    float middle = array[5000];
- */
 
 void test_add_elem(uint32_t data_size, uint32_t size)
 {
@@ -53,13 +42,13 @@ void test_container()
 {
     // auto cont = new cnt::Container<int>(10);
     cnt::Container<uint32_t> container(10);
-    cnt::Container<uint64_t> c(10);
-    for(uint64_t i = 0; i < 11; ++i)
+    cnt::Container<uint32_t> c(10);
+    for(uint32_t i = 0; i < 25; ++i)
     {
         c.addElem(i, i + 5);
     }
 
-    for(uint32_t i = 0; i < 100; ++i)
+    for(uint32_t i = 0; i < 50; ++i)
     {
         container.addElem(i, i);
     }
@@ -69,6 +58,32 @@ void test_container()
     for(uint32_t i = 0; i < 30; ++i)
     {
         std::cout << container.getElem(i) << " ";
+    }
+    std::cout << std::endl;
+
+    for(uint32_t i = 0; i < 25; ++i)
+    {
+        std::cout << c.getElem(i) << " ";
+    }
+    std::cout << std::endl;
+
+    for(uint32_t i = 0; i < 25; ++i)
+    {
+        container.addElem(i, i * 2);
+    }
+    for(uint32_t i = 0; i < 30; ++i)
+    {
+        std::cout << container.getElem(i) << " ";
+    }
+    std::cout << std::endl;
+
+    for(uint32_t i = 0; i < 25; ++i)
+    {
+        c.addElem(i, i * 10);
+    }
+    for(uint32_t i = 0; i < 25; ++i)
+    {
+        std::cout << c.getElem(i) << " ";
     }
     std::cout << std::endl;
 
@@ -83,4 +98,129 @@ void test_container()
     std::cout << container.getElem(1) << std::endl;
     std::cout << container.getElem(12);
     std::cout << container.getElem(11);*/
+}
+
+void test_array(uint32_t elem_num, uint32_t data_size, uint32_t max_size)
+{
+    // create array of objects
+    std::vector<cnt::Container<float>> v;
+    cnt::Container<float> c0(data_size);
+    cnt::Container<float> c1(data_size);
+    cnt::Container<float> c2(data_size);
+    cnt::Container<float> c3(data_size);
+    cnt::Container<float> c4(data_size);
+
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        c0.addElem(j, j);
+    }
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        c1.addElem(j, j * 2);
+    }
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        c2.addElem(j, j * 3);
+    }
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        c3.addElem(j, j * 4);
+    }
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        c4.addElem(j, j * 5);
+    }
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c0.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c1.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c2.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c3.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c4.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    c0.addElem(data_size / 2, 10000);
+    c1.addElem(data_size / 2, 10000);
+    c2.addElem(data_size / 2, 10000);
+    c3.addElem(data_size / 2, 10000);
+    c4.addElem(data_size / 2, 10000);
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c0.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c1.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c2.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c3.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    for(uint32_t j = 0; j < max_size; ++j)
+    {
+        std::cout << c4.getElem(j) << " ";
+    }
+    std::cout << "\n";
+
+    /*
+    // auto array = new cnt::Container<float>[elem_num];
+    for(uint32_t i = 0; i < elem_num; ++i)
+    {
+       v.push_back(cnt::Container<float>(data_size));
+
+    }
+    // iterate over it in order to test multiple objects behavior
+    for(uint32_t i = 0; i < elem_num; ++i)
+    {
+        for(uint32_t j = 0; j < max_size; ++j)
+        {
+            v[i].addElem(j, i * j);
+        }
+    }
+    // print data
+    for(uint32_t i = 0; i < elem_num; ++i)
+    {
+        for(uint32_t j = 0; j < max_size; ++j)
+        {
+            std::cout << v[i].getElem(j) << " ";
+        }
+        std::cout << "\n";
+    }
+    v.clear();*/
 }
