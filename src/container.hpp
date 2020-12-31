@@ -7,7 +7,8 @@ namespace cnt {
     enum OFFSETS
     {
         SIZE = 1 << 12, // max data_ size
-        TOKEN_SIZE = 10 // max block size is TOKEN_SIZE * size_ * num_ * sizeof(T)
+        TOKEN_NUM = 10, // max block size is TOKEN_NUM * size_ * num_ * sizeof(T)
+        PAGE_SIZE = 1024
     };
 
     template <class T>
@@ -53,12 +54,16 @@ namespace cnt {
         void save_to_file();
         void load_from_file(uint32_t idx);
         void print_data();
+        void print_content();
         void print_file();
+        void calculate_token_size();
 
     private:
-        uint32_t size_; // limit of RAM used
-        uint32_t pos_;  // disk block position
-        int32_t  num_; // number of object
+        uint32_t memory_limit_; // limit of overall memory used
+        uint32_t size_;         // limit of RAM used
+        uint32_t remainder_;    // the rest of data (if memory_limit_ % PAGE_SIZE != 0)
+        uint32_t pos_;          // disk block position
+        int32_t  num_;          // number of objects
         T*       data_;
         FILE*    fout_;
     };
@@ -73,13 +78,15 @@ namespace cnt {
 
     template<typename T>
     Container<T>::Container(uint32_t size) :
-            size_(size),
+            memory_limit_(size),
+            size_(0),
             pos_(0),
             num_(0),
             data_(nullptr),
             fout_(nullptr)
     {
         num_ = this->GetCount();
+        calculate_token_size();
         fout_ = fopen(filename, "w+r+b");
         if(fout_ == nullptr)
         {
@@ -93,9 +100,22 @@ namespace cnt {
     }
 
     template<typename T>
+    void Container<T>::calculate_token_size()
+    {
+        if(memory_limit_ > PAGE_SIZE) {
+            size_ = PAGE_SIZE;
+            remainder_ = memory_limit_ % PAGE_SIZE;
+        }
+        else{
+            size_ = memory_limit_;
+            remainder_ = 0;
+        }
+    }
+
+    template<typename T>
     void Container<T>::save_to_file()
     {
-        uint32_t position = pos_ * sizeof(T) + num_ * size_ * TOKEN_SIZE * sizeof(T);
+        uint32_t position = pos_ * sizeof(T) + num_ * size_ * TOKEN_NUM * sizeof(T);
 
         int ret = fseek(fout_, position, SEEK_SET);
         if(ret != 0)
@@ -104,7 +124,15 @@ namespace cnt {
             return;
         }
 
-        fwrite(data_, sizeof(T), size_, fout_);
+        uint32_t size_to_write = 0;
+
+        // the rest of data remained
+        if((pos_ / size_ == memory_limit_ / size_) && (remainder_ != 0))
+            size_to_write = remainder_;
+        else
+            size_to_write = size_;
+
+        fwrite(data_, sizeof(T), size_to_write, fout_);
         if(ferror(fout_))
         {
             std::cerr << "Error writing to file\n";
@@ -114,7 +142,7 @@ namespace cnt {
     template<typename T>
     void Container<T>::load_from_file(uint32_t idx)
     {
-        uint32_t position = (idx / size_) * size_ * sizeof(T) + num_ * size_ * TOKEN_SIZE * sizeof(T);
+        uint32_t position = (idx / size_) * size_ * sizeof(T) + num_ * size_ * TOKEN_NUM * sizeof(T);
 
         int ret = fseek(fout_, position, SEEK_SET);
         if(ret != 0)
@@ -122,10 +150,23 @@ namespace cnt {
             std::cerr << "Fseek failed!\n";
             return;
         }
-        size_t read_size = fread(data_, sizeof(T), size_, fout_);
-        if((read_size != size_) && (read_size != 0))
+
+        uint32_t size_to_read = 0;
+
+        // the rest of data remained
+        if((idx / size_ == memory_limit_ / size_) && (remainder_ != 0))
+            size_to_read = remainder_;
+        else
+            size_to_read = size_;
+
+        // std::cout << "idx: " << idx << ", size_to_read: " << size_to_read << std::endl;
+        // this->print_content();
+
+        size_t read_size = fread(data_, sizeof(T), size_to_read, fout_);
+        if((read_size != size_to_read) && (read_size != 0))
         {
-            std::cerr << "Load from file: Fread failed: " << read_size << std::endl;
+            std::cerr << "Load from file: Fread failed: " << read_size << ", idx: " << idx << std::endl;
+
         }
         ret = fseek(fout_, 0, SEEK_SET);
         if(ret != 0)
@@ -138,9 +179,14 @@ namespace cnt {
     template<typename T>
     void Container<T>::addElem(uint32_t idx, T elem)
     {
+        if(idx >= memory_limit_)
+        {
+            std::cerr << "addElem failed! Index is out of range\n";
+            return;
+        }
         if(pos_ / size_ == idx / size_) // the same block, nothing to load
         {
-                data_[idx % size_] = elem;
+            data_[idx % size_] = elem;
         }
         else
         {
@@ -155,6 +201,11 @@ namespace cnt {
     template<typename T>
     const T Container<T>::getElem(uint32_t idx)
     {
+        if(idx >= memory_limit_)
+        {
+            std::cerr << "addElem failed! Index is out of range\n";
+            return T(EXIT_FAILURE);
+        }
         if(pos_ / size_ == idx / size_) // the same block
         {
             return data_[idx % size_];
@@ -166,6 +217,27 @@ namespace cnt {
             pos_ = (idx / size_) * size_;
             return data_[idx % size_];
         }
+    }
+
+    /*
+     *  uint32_t memory_limit_; // limit of overall memory used
+        uint32_t size_;         // limit of RAM used
+        uint32_t remainder_;    // the rest of data (if memory_limit_ % PAGE_SIZE != 0)
+        uint32_t pos_;          // disk block position
+        int32_t  num_;          // number of objects
+        T*       data_;
+        FILE*    fout_;
+     */
+
+    template<typename T>
+    void Container<T>::print_content()
+    {
+        std::cout << "printing content ...\n";
+        std::cout << "memory_limit: " << memory_limit_
+                  << "\nsize: " << size_
+                  << "\nremainder: " << remainder_
+                  << "\npos: " << pos_
+                  << "\nnum: " << num_ << std::endl;
     }
 
     template<typename T>

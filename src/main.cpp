@@ -1,17 +1,20 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <ctime>
 #include "container.hpp"
 
 void test_container();
 void measure_time_addElem(uint32_t data_size, uint32_t max_size);
 void test_array(uint32_t elem_num, uint32_t data_size, uint32_t max_size);
+void test_large_memory_limist();
 
 int main()
 {
-    test_container();
-    test_array(1, 10, 25);
-    measure_time_addElem(1024, 10 * 1024);
+    // test_container();
+    test_large_memory_limist();
+    // test_array(1, 10, 25);
+    // measure_time_addElem(1024, 10 * 1024);
     return 0;
 }
 
@@ -38,24 +41,36 @@ void measure_time_addElem(uint32_t data_size, uint32_t max_size)
     out.close();
 }
 
+void test_large_memory_limist()
+{
+    cnt::Container<uint32_t> c(65535);
+    for(uint32_t i = 0; i < 65535; ++i)
+    {
+        c.addElem(i, i);
+    }
+    for(uint32_t i = 0; i < 65535; ++i)
+    {
+        c.getElem(i);
+    }
+}
+
 void test_container()
 {
-    // auto cont = new cnt::Container<int>(10);
-    cnt::Container<uint32_t> container(10);
-    cnt::Container<uint32_t> c(10);
+    cnt::Container<uint32_t> container(55);
+    cnt::Container<uint32_t> c(25);
     for(uint32_t i = 0; i < 25; ++i)
     {
-        c.addElem(i, i + 5);
+        c.addElem(i, i);
     }
 
-    for(uint32_t i = 0; i < 50; ++i)
+    for(uint32_t i = 0; i < 55; ++i)
     {
         container.addElem(i, i);
     }
     // std::cout << container.getElem(5) << std::endl;
     container.addElem(23, 10000);
     std::cout << "get test:\n";
-    for(uint32_t i = 0; i < 30; ++i)
+    for(uint32_t i = 0; i < 55; ++i)
     {
         std::cout << container.getElem(i) << " ";
     }
@@ -67,11 +82,12 @@ void test_container()
     }
     std::cout << std::endl;
 
-    for(uint32_t i = 0; i < 25; ++i)
+
+    for(uint32_t i = 0; i < 30; ++i)
     {
         container.addElem(i, i * 2);
     }
-    for(uint32_t i = 0; i < 30; ++i)
+    for(uint32_t i = 0; i < 55; ++i)
     {
         std::cout << container.getElem(i) << " ";
     }
