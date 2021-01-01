@@ -4,11 +4,14 @@
 
 namespace cnt {
     static const char* filename = "buffer.txt";
+
     enum OFFSETS
     {
-        SIZE = 1 << 12, // max data_ size
-        PAGE_SIZE = 1024
+        SIZE      = 1 << 16, // read limit while dumping from file
+        PAGE_SIZE = 1 << 10  // size of block to be written
     };
+
+    // counter of elements number
 
     template <class T>
     class Counter
@@ -28,8 +31,7 @@ namespace cnt {
         {
             count--;
         }
-        static int GetCount() {
-
+        static int getCount() {
             return count;
         }
     };
@@ -40,15 +42,16 @@ namespace cnt {
     template<typename T>
     class Container : private Counter<Container<T>>{
     public:
-        using Counter<Container<T>>::GetCount;
+        using Counter<Container<T>>::getCount;
 
         Container() = delete;
         explicit Container(uint32_t size);
         ~Container();
 
         T& operator[](uint32_t idx) = delete;
-        void    addElem(uint32_t idx, T elem);
-        const T getElem(uint32_t idx);
+        void     addElem(uint32_t idx, T elem);
+        const T  getElem(uint32_t idx);
+        uint32_t calculate_block_size(uint32_t idx);
 
         void save_to_file();
         void load_from_file(uint32_t idx);
@@ -84,7 +87,7 @@ namespace cnt {
             data_(nullptr),
             fout_(nullptr)
     {
-        num_ = this->GetCount();
+        num_ = this->getCount();
         calculate_token_size();
         fout_ = fopen(filename, "w+r+b");
         if(fout_ == nullptr)
@@ -97,6 +100,11 @@ namespace cnt {
             std::cerr << e.what() << std::endl;
         }
     }
+
+    /*
+     * It's supposed that minimal amount of data
+     * to be written is at least equal to PAGE_SIZE
+     */
 
     template<typename T>
     void Container<T>::calculate_token_size()
@@ -111,10 +119,29 @@ namespace cnt {
         }
     }
 
+    /*
+     * Calculate size of the block to be written / read
+     * considering the rest of data from remainder
+     */
+
+    template<typename T>
+    uint32_t Container<T>::calculate_block_size(uint32_t idx)
+    {
+        uint32_t block_size = 0;
+        if((idx / size_ == memory_limit_ / size_) && (remainder_ != 0))
+            block_size = remainder_;
+        else
+            block_size = size_;
+        return block_size;
+    }
+
+    /*
+     * maximal space to be used on disk
+     * for each container: num_ * memory_limit_ * sizeof(T)
+     */
     template<typename T>
     void Container<T>::save_to_file()
     {
-        // max block size for each container - num_ * memory_limit_ * sizeof(T)
         uint32_t position = pos_ * sizeof(T) + num_ * memory_limit_ * sizeof(T);
 
         int ret = fseek(fout_, position, SEEK_SET);
@@ -124,13 +151,8 @@ namespace cnt {
             return;
         }
 
-        uint32_t size_to_write = 0;
-
         // the rest of data remained
-        if((pos_ / size_ == memory_limit_ / size_) && (remainder_ != 0))
-            size_to_write = remainder_;
-        else
-            size_to_write = size_;
+        uint32_t size_to_write = calculate_block_size(pos_);
 
         fwrite(data_, sizeof(T), size_to_write, fout_);
         if(ferror(fout_))
@@ -151,13 +173,8 @@ namespace cnt {
             return;
         }
 
-        uint32_t size_to_read = 0;
-
         // the rest of data remained
-        if((idx / size_ == memory_limit_ / size_) && (remainder_ != 0))
-            size_to_read = remainder_;
-        else
-            size_to_read = size_;
+        uint32_t size_to_read = calculate_block_size(idx);
 
         size_t read_size = fread(data_, sizeof(T), size_to_read, fout_);
         if((read_size != size_to_read) && (read_size != 0))
@@ -215,16 +232,6 @@ namespace cnt {
             return data_[idx % size_];
         }
     }
-
-    /*
-     *  uint32_t memory_limit_; // limit of overall memory used
-        uint32_t size_;         // limit of RAM used
-        uint32_t remainder_;    // the rest of data (if memory_limit_ % PAGE_SIZE != 0)
-        uint32_t pos_;          // disk block position
-        int32_t  num_;          // number of objects
-        T*       data_;
-        FILE*    fout_;
-     */
 
     template<typename T>
     void Container<T>::print_content()

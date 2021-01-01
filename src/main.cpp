@@ -1,20 +1,19 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <map>
 #include <ctime>
 #include "container.hpp"
 
 void test_container();
 void measure_time_addElem(uint32_t data_size, uint32_t max_size);
-void test_array(uint32_t size);
+void test_multiple_objects(uint32_t size);
 void test_large_memory_limist(int size);
 
 int main()
 {
     // test_container();
     test_large_memory_limist(65535);
-    test_array(65535);
+    test_multiple_objects(65535);
     // measure_time_addElem(1024, 10 * 1024);
     return 0;
 }
@@ -31,13 +30,14 @@ void test_add_elem(uint32_t size)
 void measure_time_addElem(uint32_t data_size, uint32_t max_size)
 {
     std::ofstream out("out.txt");
-    for(uint32_t i = data_size; i < max_size; i += 4)
-    {
-        clock_t begin = clock();
-        test_add_elem(i);
-        clock_t end = clock();
-        double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-        out << i << " " << time_spent << "\n";
+    if(out.is_open()) {
+        for (uint32_t i = data_size; i < max_size; i += 4) {
+            clock_t begin = clock();
+            test_add_elem(i);
+            clock_t end = clock();
+            double time_spent = (double) (end - begin) / CLOCKS_PER_SEC;
+            out << i << " " << time_spent << "\n";
+        }
     }
     out.close();
 }
@@ -121,19 +121,11 @@ void test_container()
     container.print_file();
     c.print_data();
     c.print_file();
-
-    /*
-    container.addElem(11, 11);
-
-    std::cout << container.getElem(1) << std::endl;
-    std::cout << container.getElem(12);
-    std::cout << container.getElem(11);*/
 }
 
-void test_array(uint32_t size)
+void test_multiple_objects(uint32_t size)
 {
-    // create array of objects
-    std::vector<cnt::Container<float>> v;
+    // create multiple objects
     cnt::Container<float> c0(size);
     cnt::Container<float> c1(size);
     cnt::Container<float> c2(size);
