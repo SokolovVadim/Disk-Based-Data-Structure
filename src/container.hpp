@@ -7,7 +7,6 @@ namespace cnt {
     enum OFFSETS
     {
         SIZE = 1 << 12, // max data_ size
-        TOKEN_NUM = 10, // max block size is TOKEN_NUM * size_ * num_ * sizeof(T)
         PAGE_SIZE = 1024
     };
 
@@ -115,7 +114,8 @@ namespace cnt {
     template<typename T>
     void Container<T>::save_to_file()
     {
-        uint32_t position = pos_ * sizeof(T) + num_ * size_ * TOKEN_NUM * sizeof(T);
+        // max block size for each container - num_ * memory_limit_ * sizeof(T)
+        uint32_t position = pos_ * sizeof(T) + num_ * memory_limit_ * sizeof(T);
 
         int ret = fseek(fout_, position, SEEK_SET);
         if(ret != 0)
@@ -142,7 +142,7 @@ namespace cnt {
     template<typename T>
     void Container<T>::load_from_file(uint32_t idx)
     {
-        uint32_t position = (idx / size_) * size_ * sizeof(T) + num_ * size_ * TOKEN_NUM * sizeof(T);
+        uint32_t position = (idx / size_) * size_ * sizeof(T) + num_ * memory_limit_ * sizeof(T);
 
         int ret = fseek(fout_, position, SEEK_SET);
         if(ret != 0)
@@ -158,9 +158,6 @@ namespace cnt {
             size_to_read = remainder_;
         else
             size_to_read = size_;
-
-        // std::cout << "idx: " << idx << ", size_to_read: " << size_to_read << std::endl;
-        // this->print_content();
 
         size_t read_size = fread(data_, sizeof(T), size_to_read, fout_);
         if((read_size != size_to_read) && (read_size != 0))
